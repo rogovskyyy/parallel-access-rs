@@ -6,6 +6,7 @@ use std::{
 };
 
 use rand::Rng;
+use tokio::runtime::Builder;
 
 #[derive(Debug, Clone)]
 enum Action { Add, Mul }
@@ -13,11 +14,23 @@ enum Action { Add, Mul }
 #[tokio::main]
  async fn main() {
 
+    // 1. Maksymalna liczba wątków wynosi 4
+    // 2. Przydział puli wątków w Tokio jest losowy
+    // 3. Pętla oczekuje na zakończenie głównej procedury
+    // 4. Zbyt szybkie spawnowanie wątków gubi je
+
     let threads = 4;
     let iter  = Arc::new(tokio::sync::Mutex::new(0));
-    let end = Arc::new(tokio::sync::Mutex::new(32));
+    let end = Arc::new(tokio::sync::Mutex::new(128));
     let inc = tokio::sync::Mutex::new(1);
     let action = tokio::sync::Mutex::new(Action::Add);
+
+    //let runtime = Builder::new_multi_thread()
+    //    .worker_threads(threads)
+    //    .thread_name("my-custom-name")
+    //    .thread_stack_size(3 * 1024 * 1024)
+    //    .build()
+    //    .unwrap();
 
     for i in 0..threads {
 
@@ -54,11 +67,11 @@ enum Action { Add, Mul }
                     *v += 1;
                     println!("[Thread {}] Accessed variable ({})", i, v);
                 } else {
-                    println!("[Thread {}] Hazard acces variable", i);
+                    println!("[Thread {}] Hazard access variable", i);
                 }
 
                 let mut rng = rand::thread_rng();
-                let value = rng.gen_range(100, 5000);
+                let value = rng.gen_range(100, 2000);
                 thread::sleep(Duration::from_millis(value));
 
             }
@@ -66,6 +79,8 @@ enum Action { Add, Mul }
             println!("[Thread {}] Ended task", i);
 
         });
+
+        thread::sleep(Duration::from_millis(500));
 
     }
 }
